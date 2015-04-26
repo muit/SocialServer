@@ -1,1 +1,1 @@
-require("./core.js")({env: "production"});
+SocialServer = require("./core.js")({env: "production"});

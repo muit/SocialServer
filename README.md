@@ -1,34 +1,4 @@
-# Dorus
-Simple chat application.
-
-### Config example
-Put this on "source/server/config.coffee"
-```coffeescript
-Config={
-	env:"development",
-	server:{
-		home:"index.html",
-		directory:"./public",
-		debug: true,
-		log: true,
-		secure: false,
-		session:{
-			enabled: true,
-			persistence: true,
-			lifetime: 3600,
-			new_session_url:"/session",
-			global_path: true
-		}
-	},
-
-	#Redis config
-	redis:{
-		url:"",
-		port:6379,
-		auth:""
-	}
-}
-```
+# SocialServer
 
 ### Pull Requests
 

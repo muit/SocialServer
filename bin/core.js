@@ -1,1 +1,68 @@
-(function(){var Config,Core,Redis,SM;Config={env:"development",server:{home:"index.html",directory:"./public",debug:!0,log:!0,secure:!1,session:{enabled:!0,persistence:!0,lifetime:3600,new_session_url:"/session",global_path:!0}},redis:{url:"redis-muit-2357587132.redis.irstack.com",port:6379,auth:"redis-muit-2357587132.redis.irstack.com:f327cfe980c971946e80b8e975fbebb4"}},"undefined"==typeof Utyl&&require("../source/utyl/utyl.js"),SM=require("serve-me"),Redis=require("redis"),Core=function(){function Core(attr){var port;if(!Config)throw new Error("Need to provide a config file ('source/server/config.coffee')");port="production"===attr.env?process.env.PORT||8080:3e3,Config.server.debug="production"===attr.env?!1:!0,this.http_server=SM(Config.server),this.login=new Core.Login(this),this.http_server.start(port)}return Core}(),module.exports=Core,Core.Login=function(){function Login(core){this.core=core,this.core.http_server.on("new_session",function(_this){return function(evt){return"logged in"}}(this)),this.core.http_server.on("session",function(_this){return function(evt){return"logged again"}}(this))}return Login}()}).call(this);
+var global.nohm = nohm = require('nohm').Nohm;
+var Redis = require('redis');
+var SocketIO = require('socket.io');
+
+var SocialServer = function(args){
+	if(!this instanceof SocialServer) return new SocialServer(args);
+
+	this.envelopment = args.env || "development";
+	args.port = args.port || 14494;
+	args.redis = args.redis || {};
+	args.redis.url = args.redis.url || "127.0.0.1";
+	args.redis.port = args.redis.port || 6379;
+
+
+	/********
+	 * Load *
+	*********/
+	redis = Redis.createClient(args.redis.port, args.redis.url);
+	nohm.setClient(redis);
+	console.log("\n## Redis connected at "+ args.redis.url + ":" + args.redis.port);
+
+	//Load Schema
+	require("../config/schema.js")(nohm);
+
+
+	/*************
+	 * Socket IO *
+	**************/
+	var io = SocketIO(args.port);
+
+	io.on('connection', function (socket) {
+		var user;
+
+    socket.on('registry', function(name, email, password){
+      User.Registry(name, email, password, socket);
+    });
+
+    socket.on('login', function(name, password){
+      if(user && user.connected){//Check if is already loged in.
+        socket.emit("login", "Already logged in");
+        return;
+      }
+
+      user = User.Login(name, password);
+
+      if(user && user.connected){
+        socket.emit("login", "Logged in");
+        console.log("  "+name+" logged in.");
+      }
+    });
+
+    socket.on('logout', function(name, email, password){
+      if(user && user.connected)
+        user.logout();
+    });
+
+	  socket.on('disconnect', function () {
+	    if(user && user.connected)
+        user.logout();
+	  });
+	});
+}
+
+SocialServer.prototype = {
+
+}
+
+module.exports = SocialServer;

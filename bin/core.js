@@ -1,6 +1,7 @@
-var global.nohm = nohm = require('nohm').Nohm;
+var nohm = global.nohm = require('nohm').Nohm;
 var Redis = require('redis');
 var SocketIO = require('socket.io');
+var readline = require('readline');
 
 var SocialServer = function(args){
 	if(!this instanceof SocialServer) return new SocialServer(args);
@@ -62,7 +63,36 @@ var SocialServer = function(args){
 }
 
 SocialServer.prototype = {
-
+  
 }
 
+SocialServer.version = "0.0.2";
 module.exports = SocialServer;
+
+
+/*******************
+ * Console Control *
+ *******************/
+var rl = readline.createInterface(process.stdin, process.stdout);
+
+rl.setPrompt('SocialServer-v'+SocialServer.version+'> ');
+
+rl.on('line', function(line) {
+  if(line.length <= 0){
+    rl.prompt();
+    return;
+  }
+
+  switch(line.trim()) {
+    case "exit":
+      process.exit(0);
+      break;
+    default:
+      console.log('Say what? I might have heard `' + line.trim() + '`');
+      break;
+  }
+  rl.prompt();
+}).on('close', function() {
+  console.log("");
+  process.exit(0);
+});

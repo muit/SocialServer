@@ -13,8 +13,7 @@ module.exports = function(nohm){
         type: 'string',
         unique: true,
         validations: [
-          'email',
-          'notEmpty'
+          'email'
         ]
       },
 
@@ -22,7 +21,6 @@ module.exports = function(nohm){
         type: 'string',
         unique: false,
         validations: [
-          'password',
           'notEmpty'
         ]
       },

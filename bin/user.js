@@ -12,11 +12,11 @@ User.prototype = {
 }
 
 //Static User
-User.Registry = function(username, email, password, socket){
+User.Registry = function(name, email, password, socket){
   var user = global.nohm.factory('User');
 
   user.p({
-    name: username,
+    name: name,
     email: email,
     password: password
   });
@@ -29,13 +29,13 @@ User.Registry = function(username, email, password, socket){
       socket.emit("registry", "Unknown error.");
     } else {
       socket.emit("registry", "correct");
-      console.log('New user: '+username);
+      console.log('New user: '+name);
     }
   });
 }
 
-User.Login = function(username, password){
-  return new User(username, password);
+User.Login = function(name, password){
+  return new User(name, password);
 }
 
 User.Remove = function(userModel){

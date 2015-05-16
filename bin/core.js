@@ -1,4 +1,4 @@
-var nohm = global.nohm = require('nohm').Nohm;
+nohm = require('nohm').Nohm;
 var Redis = require('redis');
 var SocketIO = require('socket.io');
 var readline = require('readline');
@@ -13,7 +13,7 @@ var SocialServer = function(args){
 
   args = args || {};
 	this.envelopment = args.env || "development";
-	args.port = args.port || 14494;
+	args.port = args.port || 4567;
   args.console = args.console || true;
 
 	args.redis = args.redis || {};
@@ -27,10 +27,10 @@ var SocialServer = function(args){
 	*********/
 	redis = Redis.createClient(args.redis.port, args.redis.url);
 	nohm.setClient(redis);
-	console.log("\n## Redis connected at "+ args.redis.url + ":" + args.redis.port);
+	console.log("[SocialServer] Redis connected at "+ args.redis.url + ":" + args.redis.port);
 
 	//Load Schema
-	require("../config/schema")(nohm);
+	require("../config/schema")();
 
   this.loadSocketIO();
   if(args.console == true)
@@ -60,6 +60,10 @@ SocialServer.prototype = {
         case "exit":
           process.exit(0);
           break;
+        case "status":
+          if(words[1] == "redis")
+            console.log(redis);
+          break;
         default:
           console.log('Say what? I might have heard `' + line.trim() + '`');
           break;
@@ -76,35 +80,40 @@ SocialServer.prototype = {
   **************/
   io: null,
   loadSocketIO: function(){
-    var io = SocketIO(this.config.port);
+    io = SocketIO({
+      transports: ['websocket']
+    });
+
+    io.attach(this.config.port);
+
+    console.log("[SocialServer] Listening on port "+this.config.port);
 
     io.on('connection', function (socket) {
       var user;
+
+      console.log("Socket Connected.");
 
       socket.on('registry', function(name, email, password){
         User.Registry(name, email, password, socket);
       });
 
-      socket.on('login', function(name, password){
+      socket.on('login', function(data){
+
         if(user && user.connected){//Check if is already loged in.
-          socket.emit("login", "Already logged in");
+          socket.emit("login", {error: "true", message: "Already logged in"});
           return;
         }
 
-        user = User.Login(name, password);
-
-        if(user && user.connected){
-          socket.emit("login", "Logged in");
-          console.log("  "+name+" logged in.");
-        }
+        user = User.Login(socket, data.username, data.password);
       });
 
       socket.on('logout', function(name, email, password){
         if(user && user.connected)
-          user.logout();
-      });
-
+          user.logout(); 
+      }); 
+ 
       socket.on('disconnect', function () {
+        console.log('Socket Disconnected.');
         if(user && user.connected)
           user.logout();
       });
@@ -114,3 +123,4 @@ SocialServer.prototype = {
 
 SocialServer.version = "0.0.2";
 module.exports = SocialServer;
+

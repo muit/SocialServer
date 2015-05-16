@@ -1,9 +1,10 @@
-module.exports = function(nohm){
-	nohm.model('User', {
+Models = {};
+module.exports = function(){
+	Models.User = nohm.model('User', {
     properties: {
       name: {
         type: 'string',
-        unique: false,
+        unique: true,
         validations: [
           'notEmpty'
         ]
@@ -13,8 +14,7 @@ module.exports = function(nohm){
         type: 'string',
         unique: true,
         validations: [
-          'email',
-          'notEmpty'
+          'email'
         ]
       },
 
@@ -22,7 +22,6 @@ module.exports = function(nohm){
         type: 'string',
         unique: false,
         validations: [
-          'password',
           'notEmpty'
         ]
       },

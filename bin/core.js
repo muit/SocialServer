@@ -89,15 +89,27 @@ SocialServer.prototype = {
     console.log("[SocialServer] Listening on port "+this.config.port);
 
     io.on('connection', function (socket) {
-      var user;
+      var user = null;
 
       console.log("Socket Connected.");
 
-      socket.on('registry', function(name, email, password){
-        User.Registry(name, email, password, socket);
+      socket.on('register', function(data){
+        //Check empty strings
+        if(data.username == "" || data.email == "" || data.password == ""){
+          socket.emit("register", {error: "true", message: "Empty Credentials"});
+          return;
+        }
+
+        User.Register(data.username, data.email, data.password, socket);
       });
 
+      //Login Event
       socket.on('login', function(data){
+        //Check empty strings
+        if(data.username == "" || data.password == ""){
+          socket.emit("login", {error: "true", message: "Empty Credentials"});
+          return;
+        }
 
         if(user && user.connected){//Check if is already loged in.
           socket.emit("login", {error: "true", message: "Already logged in"});
@@ -107,9 +119,12 @@ SocialServer.prototype = {
         user = User.Login(socket, data.username, data.password);
       });
 
-      socket.on('logout', function(name, email, password){
-        if(user && user.connected)
-          user.logout(); 
+      socket.on("logout", function(){
+        if(user){
+          console.log("  '"+user.name+" disconected.");
+          user.logout();
+        }
+        user = null;
       }); 
  
       socket.on('disconnect', function () {

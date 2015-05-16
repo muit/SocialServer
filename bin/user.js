@@ -3,9 +3,8 @@ User = function(socket, username, password){
   if(!this instanceof User) return new User(socket, username, password);
   var self = this;
 
-  //Check empty strings
-  if(username == "" || password == ""){
-    socket.emit("login", {error: "true", message: "Empty Credentials"});
+  if(User.loggedNames[username] != null){
+    socket.emit("login", {error: "true", message: "Somebody else is connected at this time."});
     return;
   }
 
@@ -32,10 +31,11 @@ User = function(socket, username, password){
           console.log(err); // database or unknown error
           socket.emit("login", {error: "true", message: "There was an error"});
         } else {
-          console.log("  '"+name+"' logged in.");
+          console.log("  '"+username+"' logged in.");
           socket.emit("login", {error: "false", message: "Logged in"});
           self.connected = true;
           self.name = username;
+          User.loggedNames[username] = true;
         }
       });
     }
@@ -48,11 +48,12 @@ User.prototype = {
   userModel: null,
   logout: function(){
     this.connected = false;
+    User.loggedNames[this.name] = null;
   }
 }
 
 //Static User
-User.Registry = function(name, email, password, socket){
+User.Register = function(name, email, password, socket){
   var user = nohm.factory('User');
 
   user.p({
@@ -61,14 +62,17 @@ User.Registry = function(name, email, password, socket){
     password: password
   });
 
+
   user.save(function (err) {
     if (err === 'invalid') {
-      socket.emit("registry", 'invalid properties');
+      socket.emit("register", {error: "true", message: "Incorrect Values"});
     } else if (err) {
-      console.log(err); // database or unknown error 
-      socket.emit("registry", "Unknown error.");
+      // database or unknown error 
+      console.log('Error: '+err);
+      socket.emit("register", {error: "true", message: "There was an error"});
     } else {
-      socket.emit("registry", "correct");
+    console.log("Registry for "+name);
+      socket.emit("register", {error: "false", message: "Registered"});
       console.log('New user: '+name);
     }
   });
@@ -89,4 +93,7 @@ User.Remove = function(userModel){
   });
 }
 
-module.exports = User
+//Cache Sessions
+User.loggedNames = {};
+
+module.exports = User;

@@ -1,51 +1,57 @@
 
-User = function(socket, username, password){
-  if(!this instanceof User) return new User(socket, username, password);
+var User = function(social, socket, username, password){
+  if(!this instanceof User) return new User(social, socket, username, password);
   var self = this;
+  self.social = social;
 
   if(User.loggedNames[username] != null){
-    socket.emit("login", {error: "true", message: "Somebody else is connected at this time."});
+    socket.emit("login", {error: "true", message: "Somebody else is connected at the same time."});
     return;
   }
 
   //Autentification here
-  Models.User.find({
+  Models.User.findAndLoad({
     name: username,
     password: password
-  }, function (err, ids) {
-    if(err){
+  }, function (err, users) {
+    if(err && err != "not found"){
       console.log(err);
       socket.emit("login", {error: "true", message: "There was an error"});
     }
-    else if(ids.length <= 0)
+    else if(users.length <= 0)
     {
       socket.emit("login", {error: "true", message: "Incorrect Credentials"});
     }
-    else
+    else if(users[0] != null)
     {
-      self.userModel = nohm.factory('User', ids[0], function (err) {
-        if (err === 'not found') {
-          console.log('No user with id '+ids[0]+' found :-(');
-          socket.emit("login", {error: "true", message: "Incorrect Credentials"});
-        } else if (err) {
-          console.log(err); // database or unknown error
-          socket.emit("login", {error: "true", message: "There was an error"});
-        } else {
-          console.log("  '"+username+"' logged in.");
-          socket.emit("login", {error: "false", message: "Logged in"});
-          self.connected = true;
-          self.name = username;
-          User.loggedNames[username] = true;
-        }
-      });
+      //User Logged In
+
+      console.log("  '"+username+"' logged in.");
+      socket.emit("login", {error: "false", message: "Logged in"});
+      self.connected = true;
+      self.name = username;
+      User.loggedNames[username] = true;
+
+      //Load Modules
+      self.modules = {};
+      for(var index in Modules) {
+        self.modules[index] = new Modules[index](social, self);
+        self.modules[index].loadEvents();
+      }
     }
   });
+
+  this.socket = socket;
 }
 
 User.prototype = {
+  socket: null,
+  modules: {},
+
   connected: false,
   name: "",
   userModel: null,
+
   logout: function(){
     this.connected = false;
     User.loggedNames[this.name] = null;
@@ -78,8 +84,8 @@ User.Register = function(name, email, password, socket){
   });
 }
 
-User.Login = function(socket, name, password){
-  return new User(socket, name, password);
+User.Login = function(social, socket, name, password){
+  return new User(social, socket, name, password);
 }
 
 User.Remove = function(userModel){

@@ -3,13 +3,9 @@ var Redis = require('redis');
 var SocketIO = require('socket.io');
 var readline = require('readline');
 
-//SocialServer modules
-var User = require("./user");
-
-var SocialServer = function(args){
+SocialServer = function(args){
 	if(!(this instanceof SocialServer))
     return new SocialServer(args);
-  console.log(this instanceof SocialServer);
 
   args = args || {};
 	this.envelopment = args.env || "development";
@@ -32,12 +28,79 @@ var SocialServer = function(args){
 	//Load Schema
 	require("../config/schema")();
 
-  this.loadSocketIO();
+  io = SocketIO({
+    transports: ['websocket']
+  });
+  io.attach(this.config.port);
+
+  console.log("[SocialServer] Listening on port "+this.config.port);
+
+  this.loadEvents();
+
+
   if(args.console == true)
     this.loadConsole();
 }
 
 SocialServer.prototype = {
+  /*************
+   * Socket IO *
+  **************/
+  io: null,
+
+  loadEvents: function(){
+    var self = this;
+
+    io.on('connection', function (socket) {
+      var user = null;
+
+      console.log("Socket Connected.");
+
+      //Registry Event
+      socket.on('register', function(data){
+        //Check empty strings
+        if(data.username == "" || data.email == "" || data.password == ""){
+          socket.emit("register", {error: "true", message: "Empty Credentials"});
+          return;
+        }
+
+        User.Register(data.username, data.email, data.password, socket);
+      });
+
+      //Login Event
+      socket.on('login', function(data){
+        //Check empty strings
+        if(data.username == "" || data.password == ""){
+          socket.emit("login", {error: "true", message: "Empty Credentials"});
+          return;
+        }
+
+        if(user && user.connected){//Check if is already loged in.
+          socket.emit("login", {error: "true", message: "Already logged in"});
+          return;
+        }
+
+        user = User.Login(self, socket, data.username, data.password);
+      });
+
+      socket.on("logout", function(){
+        if(user){
+          console.log("  '"+user.name+" disconected.");
+          user.logout();
+        }
+        user = null;
+      }); 
+ 
+      socket.on('disconnect', function () {
+        console.log('Socket Disconnected.');
+        if(user && user.connected)
+          user.logout();
+      });
+
+
+    });
+  },
+
   /*******************
    * Console Control *
    *******************/
@@ -70,72 +133,18 @@ SocialServer.prototype = {
       }
       rl.prompt();
     }).on('close', function() {
-      console.log("");
       process.exit(0);
-    });
-  },
-
-  /*************
-   * Socket IO *
-  **************/
-  io: null,
-  loadSocketIO: function(){
-    io = SocketIO({
-      transports: ['websocket']
-    });
-
-    io.attach(this.config.port);
-
-    console.log("[SocialServer] Listening on port "+this.config.port);
-
-    io.on('connection', function (socket) {
-      var user = null;
-
-      console.log("Socket Connected.");
-
-      socket.on('register', function(data){
-        //Check empty strings
-        if(data.username == "" || data.email == "" || data.password == ""){
-          socket.emit("register", {error: "true", message: "Empty Credentials"});
-          return;
-        }
-
-        User.Register(data.username, data.email, data.password, socket);
-      });
-
-      //Login Event
-      socket.on('login', function(data){
-        //Check empty strings
-        if(data.username == "" || data.password == ""){
-          socket.emit("login", {error: "true", message: "Empty Credentials"});
-          return;
-        }
-
-        if(user && user.connected){//Check if is already loged in.
-          socket.emit("login", {error: "true", message: "Already logged in"});
-          return;
-        }
-
-        user = User.Login(socket, data.username, data.password);
-      });
-
-      socket.on("logout", function(){
-        if(user){
-          console.log("  '"+user.name+" disconected.");
-          user.logout();
-        }
-        user = null;
-      }); 
- 
-      socket.on('disconnect', function () {
-        console.log('Socket Disconnected.');
-        if(user && user.connected)
-          user.logout();
-      });
     });
   }
 }
 
-SocialServer.version = "0.0.2";
-module.exports = SocialServer;
+//User Class
+var User = SocialServer.User = require("./user");
+//Import Modules
+Modules = {
+  "Chat":    require("./modules/chat"),
+  "Friends": require("./modules/friends")
+}
 
+SocialServer.version = "0.0.5";
+module.exports = SocialServer;

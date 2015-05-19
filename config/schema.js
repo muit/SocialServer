@@ -24,8 +24,31 @@ module.exports = function(){
         validations: [
           'notEmpty'
         ]
-      },
+      }
 		},
+
+    methods: {
+    }
+  });
+
+  Models.FriendRequest = nohm.model('FriendRequest', {
+    properties: {
+      name: {
+        type: 'string',
+        unique: false,
+        validations: [
+          'notEmpty'
+        ]
+      },
+
+      friend: {
+        type: 'string',
+        unique: false,
+        validations: [
+          'notEmpty'
+        ]
+      }
+    },
 
     methods: {
     }

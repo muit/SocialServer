@@ -9,12 +9,13 @@ SocialServer = function(args){
 
   args = args || {};
 	this.envelopment = args.env || "development";
-	args.port = args.port || 4567;
+	args.port = process.env.PORT || (args.port || 4567);
   args.console = args.console || true;
 
+  var redisURL = url.parse(process.env.REDISCLOUD_URL);
 	args.redis = args.redis || {};
-	args.redis.url = args.redis.url || "127.0.0.1";
-	args.redis.port = args.redis.port || 6379;
+	args.redis.url = redisURL.hostname || (args.redis.url || "127.0.0.1");
+	args.redis.port = redisURL.port || (args.redis.port || 6379);
 
   this.config = args;
 
@@ -31,6 +32,7 @@ SocialServer = function(args){
   io = SocketIO({
     transports: ['websocket']
   });
+
   io.attach(this.config.port);
 
   console.log("[SocialServer] Listening on port "+this.config.port);
